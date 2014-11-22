@@ -1,0 +1,14 @@
+name = Version Redirect
+description = Keeps track of URL aliases so that if someone navigates to a change alias, Drupal redirects to a new one. 
+package = Other
+core = 7.x
+files[] = version_redirect.test
+
+; Information added by Drupal.org packaging script on 2014-10-03
+version = "7.x"
+core = "7.x"
+project = "version_redirect"
+datestamp = "1416621106336"
+dependencies[] = pathauto
+dependencies[] = globalredirect
+testing_api = 2.x

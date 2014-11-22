@@ -1,0 +1,45 @@
+<?php
+/**
+ * @file
+ * Install, update and uninstall functions for the version_redirect module.
+ */
+
+/**
+ * Implements hook_schema().
+ *
+ * @see hook_schema()
+ * @ingroup version_redirect
+ */
+function version_redirect_schema() {
+
+  $schema['version_redirect'] = array(
+    'description' => 'Stores versions of a nodes alias post save of url alias',
+    'fields' => array(
+      'aid'  => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'description' => 'Primary Key: Unique alias ID.',
+      ),
+      'nid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => "{node}.nid",
+      ),
+      'alias' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'A url alias',
+      ),
+    ),
+    'primary key' => array('aid'),
+    'indexes' => array(
+      'nid'    => array('nid'),
+      'alias' => array('alias'),
+    ),
+  );
+
+  return $schema;
+}

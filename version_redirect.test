@@ -1,0 +1,75 @@
+<?php
+/**
+ * @file
+ * SimpleTests for version_redirect module.
+ */
+
+/**
+ * Default test case for the version_redirect module.
+ *
+ * @ingroup version_redirect
+ */
+class VersionRedirectWebTestCase extends DrupalWebTestCase {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function getInfo() {
+    return array(
+      'name' => "Version Redirect Tests",
+      'description' => 'Various web tests on the version_redirect module.' ,
+      'group' => 'Version Redirect',
+    );
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function setUp() {
+    parent::setUp('version_redirect');
+  }
+
+  /**
+   * Test we can look up a versioned alias
+   */
+  public function testDatabaseLookup() {
+
+  }
+
+  /**
+   * Test that a versioned alias redirects
+   */
+  public function testRedirect() {
+
+  }
+
+  /**
+   * Test after we change a url that it redirects
+   */
+  public function testChangeUrlRedirect() {
+
+  }
+
+   /**
+   * Test after we change a url that it redirects
+   */
+  public function testOverlapTakesPrecedence() {
+
+  }
+
+   /**
+   * Test after we change a url that it redirects
+   */
+  public function testThatARedirectIsA301() {
+
+  }
+
+   /**
+   * Test after we change a url that it redirects
+   */
+  public function testProper404DoesntLoop() {
+
+  }
+
+
+}

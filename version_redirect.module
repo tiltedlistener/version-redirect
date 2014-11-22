@@ -1,0 +1,153 @@
+<?php
+
+/**
+ * NEEDS:
+ *   - Handle when we switch to automatic aliases
+ *   - And bulk updates
+ *   - Add page when you have a aliases that are duplicates in table
+ */
+
+
+/**
+ * Implements hook_help().
+ *
+ * Show some help on each form provided by this module.
+ */
+function version_redirect_help($path) {
+  $output = '';
+  switch ($path) {
+    case 'admin/help#version_redirect':
+      $output = t('Keeps track of URL aliases so that if someone navigates to a change alias, Drupal redirects to a new one. ');
+      $output .= t('This is called on all Save events that show a difference in URL alias.');
+      $output .= t('If a node takes another node\'s alias, the existing node, rather than the versioned alias will take precedence.');
+      $output .= t('The versioning redirect will only occur if a 404 happens. When the redirect occurs, this will be registered as a 301.');
+      $output .= t('For duplicate aliases between nodes in the versioning table, a page will respond with a page that displays a list of the links');
+      break;
+  }
+  return $output;
+}
+
+
+/**
+ * Implements hook_init()
+ */
+function version_redirect_init() {
+  if(!menu_get_item($_GET['q'])) {
+
+   $entries = db_select('version_redirect')
+    ->fields('version_redirect')
+    ->condition('alias', $_GET['q'])
+    ->execute()->fetchAll(PDO::FETCH_ASSOC);
+
+    if (!empty($entries)) {
+      if (sizeof($entries) > 1) {
+        _version_redirect_show_selection_page($entries[0]['alias']);
+      } else {
+        drupal_goto('node/' . $entries[0]['nid'], array(), 302);
+      }
+    }
+  }
+}
+
+
+/**
+ *  Implements hook_node_presave()
+ */
+function version_redirect_node_presave($node) {
+  if ($node->nid) {
+    $entries = db_select('url_alias')
+      ->fields('url_alias')
+      ->condition('source', 'node/' . $node->nid)
+      ->execute()->fetchAll(PDO::FETCH_ASSOC);
+    $current_alias = $entries[0]['alias'];
+    $new_alias = $node->path['alias'];
+
+    if (strcmp($current_alias, $new_alias) != 0) {
+      _version_redirect_add_version($node->nid, $current_alias);
+      _version_redirect_check_if_new_version_is_in_table($node->nid, $new_alias);
+    }    
+  }
+}
+
+
+/**
+ * Inserts an versioned URL into the version_redirect table
+ */
+function _version_redirect_add_version($nid, $version_alias) {
+   db_insert('version_redirect')
+    ->fields(array('nid' => $nid, 'alias' => $version_alias))
+    ->execute();
+}
+
+
+/**
+ * Need to test if the new alias is in the table and remove it otherwise
+ * This is for table management so we don't have duplicates in there. 
+ */
+function _version_redirect_check_if_new_version_is_in_table($nid, $new_alias) {
+   $entries = db_select('version_redirect')
+    ->fields('version_redirect')
+    ->condition('nid', $nid)
+    ->execute()->fetchAll(PDO::FETCH_ASSOC);
+
+    if (!empty($entries)) {
+      $len = sizeof($entries);
+      for($i = 0; $i < $len; $i++) {
+        $current = $entries[$i];
+        if (strcmp($current['alias'], $new_alias) == 0) {
+          db_delete('version_redirect')
+            ->condition('nid', $nid)
+            ->execute();
+        }
+      }
+    }
+}
+
+/**
+ * Implements hook_node_delete()
+ */
+function version_redirect_node_delete($node) {
+  db_delete('version_redirect')
+    ->condition('nid', $node->nid)
+    ->execute();
+}
+
+
+/**
+ * Implements hook_menu()
+ */
+function version_redirect_menu() {
+  $items = array();
+
+  $items['alias-version'] = array(
+    'title' => 'Choose Correct Page',
+    'page callback' => '_version_redirect_display_list_page',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
+
+/**
+ * Displays a page with list of articles that have the same versioned alias
+ */
+function _version_redirect_show_selection_page($entry) {
+  drupal_goto('alias-version/' . $entry, array(), 302);
+}
+
+/**
+ * Page callback for resolving aliases
+ */
+function _version_redirect_display_list_page($alias) {
+
+   $entries = db_select('version_redirect')
+    ->fields('version_redirect')
+    ->condition('alias', $alias)
+    ->execute()->fetchAll(PDO::FETCH_ASSOC);
+
+  return '';
+}
+
+
