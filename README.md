@@ -7,11 +7,11 @@ Aliases are versioned every time an URL alias changes for a node for any number 
 
 ## Edge Case Considerations
 
-** Versioned alias is used on another node **
+**Versioned alias is used on another node**
 
 In this case, the standard Drupal routing will direct the user to the correct page. This module only activates when a 404 occurs, so for a versioned alias to be routed successfully, the alias must not exist in the pathauto url_alias table.
 
-** Two nodes end up with the same URL alias in versioning **
+**Two nodes end up with the same URL alias in versioning**
 
 The module will present a 302 redirect to a generate page that lists links to all the pages that have that alias. 
 
