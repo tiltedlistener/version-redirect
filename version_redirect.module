@@ -1,9 +1,8 @@
 <?php
 
 /**
- * NEEDS:
- *   - Handle when we switch to automatic aliases
- *   - And bulk updates
+ * @file
+ * Creates a versioned list of node aliases
  */
 
 
@@ -18,7 +17,7 @@ function version_redirect_help($path) {
       $output .= t('This is called on all Save events that show a difference in URL alias.');
       $output .= t('If a node takes another node\'s alias, the existing node, rather than the versioned alias will take precedence.');
       $output .= t('The versioning redirect will only occur if a 404 happens. When the redirect occurs, this will be registered as a 301.');
-      $output .= t('For duplicate aliases between nodes in the versioning table, a page will respond with a page that displays a list of the links');
+      $output .= t('For duplicate aliases between nodes in the versioning table, a page will respond with a page that displays a list of the links.');
       break;
   }
   return $output;
@@ -67,8 +66,15 @@ function version_redirect_node_presave($node) {
   }
 }
 
+
 /**
- * Handles building a new versioned alias and does maintenance checks
+ * Main function to create our versioned alias
+ * @param  $nid           
+ *   Node id
+ * @param  $current_alias 
+ *   The current url alias of the node
+ * @param  $new_alias     
+ *   The generated url alias of the node
  */
 function  _version_redirect_create_new_alias($nid, $current_alias, $new_alias) {
   _version_redirect_add_version($nid, $current_alias);
@@ -77,7 +83,11 @@ function  _version_redirect_create_new_alias($nid, $current_alias, $new_alias) {
 
 
 /**
- * Inserts an versioned URL into the version_redirect table
+ * Add the old url alias to the versioning table
+ * @param  $nid           
+ *   Node id
+ * @param  $version_alias
+ *   The old versioned alias that the module saves
  */
 function _version_redirect_add_version($nid, $version_alias) {
   if (!_version_redirect_check_if_version_alias_already_exists($nid, $version_alias)) {
@@ -89,7 +99,13 @@ function _version_redirect_add_version($nid, $version_alias) {
 
 
 /**
- * Test if we already have an alias prepared. 
+ * Check if we already have the alias present in the table for this node.
+ * 
+ * @param  $nid             
+ *   Node id
+ * @param  $versioned_alias
+ *   The old alias that the module will save in the db
+ * @return bool             
  */
 function _version_redirect_check_if_version_alias_already_exists($nid, $versioned_alias) {
     $entries = db_select('version_redirect')
@@ -105,8 +121,12 @@ function _version_redirect_check_if_version_alias_already_exists($nid, $versione
 
 
 /**
- * Need to test if the new alias is in the table and remove it otherwise
- * This is for table management so we don't have duplicates in there. 
+ * Tests if the new version of an alias is in the db. Won't need to redirect if 
+ * the existing alias routes correctly. Essentially this is Db clean up. 
+ * @param  $nid  
+ *   Node id
+ * @param  $new_alias
+ *   The just created alias
  */
 function _version_redirect_check_if_new_version_is_in_table($nid, $new_alias) {
    $entries = db_select('version_redirect')
@@ -126,6 +146,7 @@ function _version_redirect_check_if_new_version_is_in_table($nid, $new_alias) {
       }
     }
 }
+
 
 /**
  * Implements hook_node_delete()
@@ -156,14 +177,32 @@ function version_redirect_menu() {
 
 
 /**
- * Displays a page with list of articles that have the same versioned alias
+ * Redirects the user to our settle resolution page with the appropriate alias.
+ * 
+ * This feature is intended to resolve the conflict where at least two versioned 
+ * aliases are the same. Therefore, the module presents a page with a list of 
+ * aliased links for the user to select. 
+ * 
+ * @param  $entry
+ *   The url alias being looked up.
  */
 function _version_redirect_show_selection_page($entry) {
   drupal_goto('alias-version/' . urlencode($entry), array(), 302);
 }
 
+
 /**
- * Page callback for resolving aliases
+ * Displays a page with a list of links that all contain the same alias
+ * in the versioning table. 
+ *
+ * This feature is intended to resolve the conflict where at least two versioned 
+ * aliases are the same. Therefore, the module presents a page with a list of 
+ * aliased links for the user to select. 
+ * 
+ * @param $alias 
+ *   The url alias that is in conflict
+ * @return 
+ *   HTML
  */
 function _version_redirect_display_list_page($alias) {
 
@@ -185,7 +224,7 @@ function _version_redirect_display_list_page($alias) {
 
 
 /**
- * Implements hook_pathauto_alias_alter
+ * Implements hook_pathauto_alias_alter()
  */
 function version_redirect_pathauto_alias_alter($alias, $context) {
   if ($context['op'] == 'bulkupdate') {
