@@ -34,13 +34,20 @@ class VersionRedirectWebTestCase extends DrupalWebTestCase {
     ));
     $this->drupalLogin($this->privilegedUser);
 
-    // Add dummy node
+    // Add dummy nodes
     $settings = array(
       'type' => 'article',
       'title' => "Sample Page",
       'body' => array(LANGUAGE_NONE => array(array($this->randomName(64)))),
     );
     $node = $this->drupalCreateNode($settings);  
+
+    $settingsTwo = array(
+      'type' => 'article',
+      'title' => "Other Sample Page",
+      'body' => array(LANGUAGE_NONE => array(array($this->randomName(64)))),
+    );
+    $node = $this->drupalCreateNode($settingsTwo);      
   }
 
   /**
