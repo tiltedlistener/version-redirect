@@ -4,14 +4,11 @@
  * NEEDS:
  *   - Handle when we switch to automatic aliases
  *   - And bulk updates
- *   - Add page when you have a aliases that are duplicates in table
  */
 
 
 /**
  * Implements hook_help().
- *
- * Show some help on each form provided by this module.
  */
 function version_redirect_help($path) {
   $output = '';
@@ -60,13 +57,22 @@ function version_redirect_node_presave($node) {
       ->condition('source', 'node/' . $node->nid)
       ->execute()->fetchAll(PDO::FETCH_ASSOC);
     $current_alias = $entries[0]['alias'];
-    $new_alias = $node->path['alias'];
 
-    if (strcmp($current_alias, $new_alias) != 0) {
-      _version_redirect_add_version($node->nid, $current_alias);
-      _version_redirect_check_if_new_version_is_in_table($node->nid, $new_alias);
-    }    
+    if (isset($node->path['alias'])) {
+      $new_alias = $node->path['alias'];
+      if (strcmp($current_alias, $new_alias) != 0) {
+        _version_redirect_create_new_alias($node->nid, $current_alias, $new_alias);
+      }        
+    }  
   }
+}
+
+/**
+ * Handles building a new versioned alias and does maintenance checks
+ */
+function  _version_redirect_create_new_alias($nid, $current_alias, $new_alias) {
+  _version_redirect_add_version($nid, $current_alias);
+  _version_redirect_check_if_new_version_is_in_table($nid, $new_alias);
 }
 
 
@@ -74,9 +80,27 @@ function version_redirect_node_presave($node) {
  * Inserts an versioned URL into the version_redirect table
  */
 function _version_redirect_add_version($nid, $version_alias) {
-   db_insert('version_redirect')
-    ->fields(array('nid' => $nid, 'alias' => $version_alias))
-    ->execute();
+  if (!_version_redirect_check_if_version_alias_already_exists($nid, $version_alias)) {
+    db_insert('version_redirect')
+      ->fields(array('nid' => $nid, 'alias' => $version_alias))
+      ->execute();   
+    }
+}
+
+
+/**
+ * Test if we already have an alias prepared. 
+ */
+function _version_redirect_check_if_version_alias_already_exists($nid, $versioned_alias) {
+    $entries = db_select('version_redirect')
+      ->fields('version_redirect')
+      ->condition('nid', $nid)
+      ->execute()->fetchAll(PDO::FETCH_ASSOC);
+    if (empty($entries)) {
+      return false;
+    } else {
+      return true;
+    }
 }
 
 
@@ -119,11 +143,12 @@ function version_redirect_node_delete($node) {
 function version_redirect_menu() {
   $items = array();
 
-  $items['alias-version'] = array(
+  $items['alias-version/%'] = array(
     'title' => 'Choose Correct Page',
     'page callback' => '_version_redirect_display_list_page',
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
+    'page arguments' => array(1),
   );
 
   return $items;
@@ -134,7 +159,7 @@ function version_redirect_menu() {
  * Displays a page with list of articles that have the same versioned alias
  */
 function _version_redirect_show_selection_page($entry) {
-  drupal_goto('alias-version/' . $entry, array(), 302);
+  drupal_goto('alias-version/' . urlencode($entry), array(), 302);
 }
 
 /**
@@ -142,12 +167,37 @@ function _version_redirect_show_selection_page($entry) {
  */
 function _version_redirect_display_list_page($alias) {
 
+  $real_alias = urldecode($alias);
+
    $entries = db_select('version_redirect')
     ->fields('version_redirect')
-    ->condition('alias', $alias)
+    ->condition('alias', $real_alias)
     ->execute()->fetchAll(PDO::FETCH_ASSOC);
 
-  return '';
+  $list = '';
+  for ($i=0; $i < sizeof($entries); $i++) {
+    $node = node_load($entries[$i]['nid']);
+    $list .= '<div>'. l($node->title, 'node/' . $node->nid) .'</div>';
+  }
+
+  return $list;
 }
 
+
+/**
+ * Implements hook_pathauto_alias_alter
+ */
+function version_redirect_pathauto_alias_alter($alias, $context) {
+  if ($context['op'] == 'bulkupdate') {
+    $entries = db_select('url_alias')
+      ->fields('url_alias')
+      ->condition('source', $context['source'])
+      ->execute()->fetchAll(PDO::FETCH_ASSOC);
+
+    if (strcmp($entries[0]['alias'], $alias) != 0) {
+      $nid = str_replace('node/', '', $context['source']);
+      _version_redirect_create_new_alias($nid, $entries[0]['alias'], $alias);
+    }
+  }
+}
 
