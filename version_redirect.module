@@ -50,7 +50,7 @@ function version_redirect_init() {
  *  Implements hook_node_presave()
  */
 function version_redirect_node_presave($node) {
-  if ($node->nid) {
+  if (isset($node->nid)) {
     $entries = db_select('url_alias')
       ->fields('url_alias')
       ->condition('source', 'node/' . $node->nid)
