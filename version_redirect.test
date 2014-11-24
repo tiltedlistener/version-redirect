@@ -11,6 +11,8 @@
  */
 class VersionRedirectWebTestCase extends DrupalWebTestCase {
 
+  protected $privilegedUser;
+
   /**
    * {@inheritdoc}
    */
@@ -27,6 +29,11 @@ class VersionRedirectWebTestCase extends DrupalWebTestCase {
    */
   public function setUp() {
     parent::setUp('version_redirect');
+    $this->privilegedUser = $this->drupalCreateUser(array(
+      'administer content types',
+    ));
+    $this->drupalLogin($this->privilegedUser);
+
   }
 
   /**
