@@ -48,13 +48,21 @@ function version_redirect_init() {
 
 /**
  *  Implements hook_node_presave()
+ *
+ *  This only hooks for when the alias is being adjusted manually. 
  */
 function version_redirect_node_presave($node) {
+
+  // Make sure we're dealing with an existing node
   if (isset($node->nid)) {
+
+    // Look  up the current alias
     $entries = db_select('url_alias')
       ->fields('url_alias')
       ->condition('source', 'node/' . $node->nid)
       ->execute()->fetchAll(PDO::FETCH_ASSOC);
+
+    // Set to convenient variable
     $current_alias = $entries[0]['alias'];
 
     if (isset($node->path['alias'])) {
@@ -111,7 +119,9 @@ function _version_redirect_check_if_version_alias_already_exists($nid, $versione
     $entries = db_select('version_redirect')
       ->fields('version_redirect')
       ->condition('nid', $nid)
+      ->condition('alias', $versioned_alias)
       ->execute()->fetchAll(PDO::FETCH_ASSOC);
+
     if (empty($entries)) {
       return false;
     } else {
@@ -225,9 +235,12 @@ function _version_redirect_display_list_page($alias) {
 
 /**
  * Implements hook_pathauto_alias_alter()
+ *
+ * Remember, this is only for automated aliases. 
  */
 function version_redirect_pathauto_alias_alter($alias, $context) {
-  if ($context['op'] == 'bulkupdate') {
+
+  if ($context['op'] == 'bulkupdate' || $context['op'] == 'update') {
     $entries = db_select('url_alias')
       ->fields('url_alias')
       ->condition('source', $context['source'])
@@ -238,5 +251,6 @@ function version_redirect_pathauto_alias_alter($alias, $context) {
       _version_redirect_create_new_alias($nid, $entries[0]['alias'], $alias);
     }
   }
+
 }
 

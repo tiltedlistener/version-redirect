@@ -28,11 +28,7 @@ class VersionRedirectWebTestCase extends DrupalWebTestCase {
    * {@inheritdoc}
    */
   public function setUp() {
-    parent::setUp('version_redirect');
-    $this->privilegedUser = $this->drupalCreateUser(array(
-      'administer content types',
-    ));
-    $this->drupalLogin($this->privilegedUser);
+    parent::setUp('pathauto', 'globalredirect', 'version_redirect');   
 
     // Add dummy nodes
     $settings = array(
@@ -40,26 +36,56 @@ class VersionRedirectWebTestCase extends DrupalWebTestCase {
       'title' => "Sample Page",
       'body' => array(LANGUAGE_NONE => array(array($this->randomName(64)))),
     );
-    $node = $this->drupalCreateNode($settings);  
+    $this->drupalCreateNode($settings);  
 
     $settingsTwo = array(
       'type' => 'article',
       'title' => "Other Sample Page",
       'body' => array(LANGUAGE_NONE => array(array($this->randomName(64)))),
     );
-    $node = $this->drupalCreateNode($settingsTwo);      
+    $this->drupalCreateNode($settingsTwo);       
+
+    $this->privilegedUser = $this->drupalCreateUser(array(
+      'administer content types',
+      'create article content',
+      'edit any article content',
+      'delete any article content',
+      'access content',
+    ));
+    $this->drupalLogin($this->privilegedUser);
   }
 
   /**
-   * Test we can look up a versioned alias
+   * Test we can look up a versioned alias after its url changed.
    */
-  public function testDatabaseLookup() {
+  public function testNameChangeForAutomatedAndDatabaseLookup() {
 
+    // Get all the nodes
+    $nodes = db_query('SELECT * FROM {node}')->fetchAll(PDO::FETCH_ASSOC);
+
+    // Update the URL
+    $this->assertTrue(drupal_get_path_alias('node/' . $nodes[0]['nid']) == 'content/sample-page');
+
+    // Update Title (and therefore URL with pathauto)
+    $edit = array("title" => "New Sample Page");
+    $this->drupalPost('node/' . $nodes[0]['nid'] . '/edit', $edit, t('Save'));
+    $this->assertResponse(200);    
+    $this->assertText("Article ". $edit['title'] ." has been updated.");
+
+    // Reload
+    $updated_nodes = db_query('SELECT * FROM {node}')->fetchAll(PDO::FETCH_ASSOC);
+    $this->assertTrue($updated_nodes[0]['title'] == 'New Sample Page');
+    $this->assertTrue(db_query('SELECT * FROM {url_alias} WHERE source=:source', array(':source' => 'node/' . $updated_nodes[0]['nid']))->fetchAll(PDO::FETCH_ASSOC)[0]['alias'] == 'content/new-sample-page');
+
+    // Check that the versioned alias is present
+    $versioned_aliases = db_query('SELECT * FROM {version_redirect} WHERE nid=:nid', array(':nid' => $updated_nodes[0]['nid']))->fetchAll(PDO::FETCH_ASSOC);
+    $this->assertTrue('content/sample-page' == $versioned_aliases[0]['alias']);
   }
 
   /**
    * Test that a versioned alias redirects
    */
+  /**
   public function testRedirect() {
 
   }
@@ -67,6 +93,7 @@ class VersionRedirectWebTestCase extends DrupalWebTestCase {
   /**
    * Test after we change a url that it redirects
    */
+  /**
   public function testChangeUrlRedirect() {
 
   }
@@ -74,6 +101,7 @@ class VersionRedirectWebTestCase extends DrupalWebTestCase {
    /**
    * Test after we change a url that it redirects
    */
+  /**
   public function testOverlapTakesPrecedence() {
 
   }
@@ -81,6 +109,7 @@ class VersionRedirectWebTestCase extends DrupalWebTestCase {
    /**
    * Test after we change a url that it redirects
    */
+  /**
   public function testThatARedirectIsA301() {
 
   }
@@ -88,9 +117,11 @@ class VersionRedirectWebTestCase extends DrupalWebTestCase {
    /**
    * Test after we change a url that it redirects
    */
+  /**
   public function testProper404DoesntLoop() {
 
   }
+  **/
 
 
 }
