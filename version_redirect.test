@@ -85,43 +85,179 @@ class VersionRedirectWebTestCase extends DrupalWebTestCase {
   /**
    * Test that a versioned alias redirects
    */
-  /**
-  public function testRedirect() {
+  public function testRedirectOccursAfterAutomatedAliasChange() {
+    $node = node_load(1);
+    $this->assertTrue(drupal_get_path_alias('node/' . $node->nid) == 'content/sample-page');
 
+    // Update Title (and therefore URL with pathauto)
+    $edit = array("title" => "New Sample Page");
+    $this->drupalPost('node/' . $node->nid . '/edit', $edit, t('Save'));
+    $this->assertResponse(200);    
+    $this->assertText("Article ". $edit['title'] ." has been updated.");
+
+    // Clear caches
+    drupal_lookup_path('wipe');
+    drupal_flush_all_caches();
+
+    // Check that we've got a change
+    $update_node = node_load(1);
+    $this->assertTrue(drupal_get_path_alias('node/' . $update_node->nid) == 'content/new-sample-page');
+
+    // Get the old path
+    $this->drupalGet('content/sample-page');   
+    $this->assertUrl('content/new-sample-page');
   }
 
   /**
-   * Test after we change a url that it redirects
+   * Test after we change a url that it redirects for both changes
    */
-  /**
-  public function testChangeUrlRedirect() {
+  public function testChangedAutomatedAliasRedirectsForTwiceChangedUrl() {
+    $node = node_load(1);
+    $this->assertTrue(drupal_get_path_alias('node/' . $node->nid) == 'content/sample-page');
 
+    // Update Title (and therefore URL with pathauto)
+    $edit = array("title" => "New Sample Page");
+    $this->drupalPost('node/' . $node->nid . '/edit', $edit, t('Save'));
+    $this->assertResponse(200);    
+    $this->assertText("Article ". $edit['title'] ." has been updated.");
+
+    // Clear caches
+    drupal_lookup_path('wipe');
+    drupal_flush_all_caches();
+
+    // Check that we've got a change
+    $update_node = node_load(1);
+    $this->assertTrue(drupal_get_path_alias('node/' . $update_node->nid) == 'content/new-sample-page');
+
+    // Change Again
+    // Clear caches
+    drupal_lookup_path('wipe');
+    drupal_flush_all_caches();
+
+    // Get the node and confirm the alias is updated
+    $update_again_new = node_load(1);
+    $edit = array("title" => "New Sample Page Other");
+    $this->drupalPost('node/' . $update_again_new->nid . '/edit', $edit, t('Save'));
+    $this->assertResponse(200);    
+    $this->assertText("Article ". $edit['title'] ." has been updated.");    
+
+    // Clear caches
+    drupal_lookup_path('wipe');
+    drupal_flush_all_caches();
+
+    // Get the old path
+    $this->drupalGet('content/sample-page');
+    $this->assertUrl('content/new-sample-page-other');    
+
+    $this->drupalGet('content/new-sample-page');  
+    $this->assertUrl('content/new-sample-page-other');     
   }
 
    /**
    * Test after we change a url that it redirects
+   *
+   * This is to ensure that url_aliases take priority if a node happens to take on a versioned alias
    */
-  /**
-  public function testOverlapTakesPrecedence() {
+  public function testOverlappedAliasTakesPrecedence() {
+    $node = node_load(1);
+    $this->assertTrue(drupal_get_path_alias('node/' . $node->nid) == 'content/sample-page');
 
+    // Update Title (and therefore URL with pathauto)
+    $edit = array("title" => "New Sample Page");
+    $this->drupalPost('node/' . $node->nid . '/edit', $edit, t('Save'));
+    $this->assertResponse(200);    
+    $this->assertText("Article ". $edit['title'] ." has been updated.");
+
+    // Clear caches
+    drupal_lookup_path('wipe');
+    drupal_flush_all_caches();
+
+    // Check that we've got a change
+    $update_node = node_load(1);
+    $this->assertTrue(drupal_get_path_alias('node/' . $update_node->nid) == 'content/new-sample-page');
+
+    // Get the old path
+    $this->drupalGet('content/sample-page');   
+    $this->assertUrl('content/new-sample-page');
+    $this->assertUrl('node/1');
+
+    // Add a new node and give it the other node's url
+    $settings = array(
+      'type' => 'article',
+      'title' => "Sample Page",
+      'body' => array(LANGUAGE_NONE => array(array($this->randomName(64)))),
+    );
+    $this->drupalCreateNode($settings);   
+
+    // Clear caches
+    drupal_lookup_path('wipe');
+    drupal_flush_all_caches();
+
+    // Now check that alias works
+    $this->drupalGet('content/sample-page');    
+    $this->assertUrl('content/sample-page');
+    $this->assertUrl('node/3');    
   }
 
    /**
-   * Test after we change a url that it redirects
+   * Test that 404s still occur when looking for pages not in the node table
    */
-  /**
-  public function testThatARedirectIsA301() {
-
-  }
-
-   /**
-   * Test after we change a url that it redirects
-   */
-  /**
   public function testProper404DoesntLoop() {
+    // Fetch a bad url
+    $this->drupalGet('content/sample-page-test');  
+    $this->assertResponse(404);    
+  }
+
+   /**
+   * Test that 404s occur when a node is deleted along with its versioned aliases
+   */
+  public function testProper404OccursOnDelete() {
+    $node = node_load(1);
+    $this->assertTrue(drupal_get_path_alias('node/' . $node->nid) == 'content/sample-page');
+
+    // Update Title (and therefore URL with pathauto)
+    $edit = array("title" => "New Sample Page");
+    $this->drupalPost('node/' . $node->nid . '/edit', $edit, t('Save'));
+    $this->assertResponse(200);    
+    $this->assertText("Article ". $edit['title'] ." has been updated.");
+
+    // Clear caches
+    drupal_lookup_path('wipe');
+    drupal_flush_all_caches();
+
+    // Test Change occured 
+    $this->drupalGet('content/sample-page');   
+    $this->assertUrl('content/new-sample-page');    
+
+    // Delete Node
+    $this->drupalPost('node/' . $node->nid . '/edit', array(), t('Delete'));   
+    $this->drupalPost(NULL, array(), t('Delete'));
+    $this->assertText(t('has been deleted'));     
+
+    // Clear caches
+    drupal_lookup_path('wipe');
+    drupal_flush_all_caches();
+
+    // Test that both pages aren't found
+    $this->drupalGet('content/sample-page');  
+    $this->assertResponse(404);    
+
+    $this->drupalGet('content/new-sample-page');  
+    $this->assertResponse(404);    
+  }
+
+  /**
+   * 
+   */
+  public function testManuallyUpdateUrlCreatesVersionedAlias() {
 
   }
-  **/
 
+  /**
+   * 
+   */
+  public function testManuallySetUrlSwitchedBackToAutomatedAliasCreatesVersionedAlias() {
+    
+  }
 
 }
