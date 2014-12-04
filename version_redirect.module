@@ -13,11 +13,9 @@ function version_redirect_help($path) {
   $output = '';
   switch ($path) {
     case 'admin/help#version_redirect':
-      $output = t('Keeps track of URL aliases so that if someone navigates to a change alias, Drupal redirects to a new one. ');
-      $output .= t('This is called on all Save events that show a difference in URL alias.');
-      $output .= t('If a node takes another node\'s alias, the existing node, rather than the versioned alias will take precedence.');
-      $output .= t('The versioning redirect will only occur if a 404 happens. When the redirect occurs, this will be registered as a 301.');
-      $output .= t('For duplicate aliases between nodes in the versioning table, a page will respond with a page that displays a list of the links.');
+        $output = t("Version Redirect module provides a redirect utility in conjunction with Pathauto, where old changed url aliases will automatically redirect to a node's current url alias.");
+
+        $output .= t("This is intended so that site administrators and content managers / editors can update their url's for more effective or more current names without fear of breaking internal or external links. This includes bulk pattern updates as well.");
       break;
   }
   return $output;
