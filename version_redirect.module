@@ -98,7 +98,6 @@ function  _version_redirect_create_new_alias($nid, $current_alias, $new_alias) {
  *   The old versioned alias that the module saves
  */
 function _version_redirect_add_version($nid, $version_alias) {
-
   if (!_version_redirect_check_if_version_alias_already_exists($nid, $version_alias)) {
     db_insert('version_redirect')
       ->fields(array('nid' => $nid, 'alias' => $version_alias))
@@ -241,10 +240,9 @@ function _version_redirect_display_list_page($alias) {
  * Remember, this is only for automated aliases. 
  */
 function version_redirect_pathauto_alias_alter($alias, $context) {
-
   // In bulk updates on the url aliases menu, user/ paths will attempted to be inserted
   // This module currently only covers nodes
-  if (!strpos($context['source'], 'user/')) {
+  if (strpos($context['source'], 'user/') == false) {
     if ($context['op'] == 'bulkupdate' || $context['op'] == 'update') {
       $entries = db_select('url_alias')
         ->fields('url_alias')
