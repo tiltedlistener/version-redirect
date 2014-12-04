@@ -28,7 +28,7 @@ class VersionRedirectWebTestCase extends DrupalWebTestCase {
    * {@inheritdoc}
    */
   public function setUp() {
-    parent::setUp('pathauto', 'globalredirect', 'version_redirect');   
+    parent::setUp('pathauto', 'globalredirect', 'version_redirect', 'path', 'token', 'taxonomy');   
 
     // Add dummy nodes
     $settings = array(
@@ -46,6 +46,14 @@ class VersionRedirectWebTestCase extends DrupalWebTestCase {
     $this->drupalCreateNode($settingsTwo);       
 
     $this->privilegedUser = $this->drupalCreateUser(array(
+      'administer pathauto',
+      'administer url aliases',
+      'create url aliases',
+      'administer nodes',
+      'bypass node access',
+      'access content overview',
+      'administer taxonomy',
+      'administer users',      
       'administer content types',
       'create article content',
       'edit any article content',
@@ -247,17 +255,85 @@ class VersionRedirectWebTestCase extends DrupalWebTestCase {
   }
 
   /**
-   * 
+   * If we create a manual alias, this will track the old automated one. 
    */
   public function testManuallyUpdateUrlCreatesVersionedAlias() {
+    $node = node_load(1);
+    $manual_alias = 'content-stuff/' . $node->nid;
+    $edit = array(
+      'path[pathauto]' => FALSE,
+      'path[alias]' => $manual_alias,
+    );
+    $this->drupalPost('node/' . $node->nid . '/edit', $edit, t('Save'));
+    $this->assertResponse(200);   
 
+    $this->drupalGet('content/sample-page');  
+    $this->assertUrl('content-stuff/' . $node->nid);  
+  }
+
+
+  /**
+   * If we create a manual alias, this will track the old automated one, and if we create a further manual one,
+   * the old customize one will be saved as well. 
+   */
+  public function testMoreThanOneManuallyUpdateUrlCreatesVersionedAlias() {
+    $node = node_load(1);
+    $manual_alias = 'content-stuff/' . $node->nid;
+    $edit = array(
+      'path[pathauto]' => FALSE,
+      'path[alias]' => $manual_alias,
+    );
+    $this->drupalPost('node/' . $node->nid . '/edit', $edit, t('Save'));
+    $this->assertResponse(200);   
+
+    $this->drupalGet('content/sample-page');  
+    $this->assertUrl('content-stuff/' . $node->nid);  
+
+    $manual_alias = 'content-stuff-other/' . $node->nid;
+    $edit = array(
+      'path[pathauto]' => FALSE,
+      'path[alias]' => $manual_alias,
+    );
+    $this->drupalPost('node/' . $node->nid . '/edit', $edit, t('Save'));
+    $this->assertResponse(200); 
+
+    $this->drupalGet('content/sample-page');  
+    $this->assertUrl('content-stuff-other/' . $node->nid);  
+
+    $this->drupalGet('content-stuff/' . $node->nid);  
+    $this->assertUrl('content-stuff-other/' . $node->nid);      
+  }  
+
+  /**
+   *  In case a user creates their own alias, goes to customized, then turns automated back on. 
+   */
+  public function testManuallySetUrlSwitchedBackToAutomatedAliasCreatesVersionedAlias() {
+    $node = node_load(1);
+    $manual_alias = 'content-stuff/' . $node->nid;
+    $edit = array(
+      'path[pathauto]' => FALSE,
+      'path[alias]' => $manual_alias,
+    );
+    $this->drupalPost('node/' . $node->nid . '/edit', $edit, t('Save'));
+
+    // From the previous test we know this will set the alias correctly
+    
+    // Now we reset the alias back using the automated one
+    $edit = array(
+      'path[pathauto]' => TRUE,
+    );
+    $this->drupalPost('node/' . $node->nid . '/edit', $edit, t('Save'));
+
+    $this->drupalGet('content-stuff/' . $node->nid);
+    $this->assertUrl('content/sample-page');
   }
 
   /**
+   * BULK UPDATES
+   *
+   * Bulk updates are handled node by node in the hook_pathauto_alias_alter
+   * These operate just like a standard individual update.
    * 
    */
-  public function testManuallySetUrlSwitchedBackToAutomatedAliasCreatesVersionedAlias() {
-    
-  }
 
 }

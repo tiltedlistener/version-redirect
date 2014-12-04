@@ -98,6 +98,7 @@ function  _version_redirect_create_new_alias($nid, $current_alias, $new_alias) {
  *   The old versioned alias that the module saves
  */
 function _version_redirect_add_version($nid, $version_alias) {
+
   if (!_version_redirect_check_if_version_alias_already_exists($nid, $version_alias)) {
     db_insert('version_redirect')
       ->fields(array('nid' => $nid, 'alias' => $version_alias))
@@ -151,6 +152,7 @@ function _version_redirect_check_if_new_version_is_in_table($nid, $new_alias) {
         if (strcmp($current['alias'], $new_alias) == 0) {
           db_delete('version_redirect')
             ->condition('nid', $nid)
+            ->condition('alias', $new_alias)
             ->execute();
         }
       }
@@ -240,16 +242,20 @@ function _version_redirect_display_list_page($alias) {
  */
 function version_redirect_pathauto_alias_alter($alias, $context) {
 
-  if ($context['op'] == 'bulkupdate' || $context['op'] == 'update') {
-    $entries = db_select('url_alias')
-      ->fields('url_alias')
-      ->condition('source', $context['source'])
-      ->execute()->fetchAll(PDO::FETCH_ASSOC);
+  // In bulk updates on the url aliases menu, user/ paths will attempted to be inserted
+  // This module currently only covers nodes
+  if (!strpos($context['source'], 'user/')) {
+    if ($context['op'] == 'bulkupdate' || $context['op'] == 'update') {
+      $entries = db_select('url_alias')
+        ->fields('url_alias')
+        ->condition('source', $context['source'])
+        ->execute()->fetchAll(PDO::FETCH_ASSOC);
 
-    if (strcmp($entries[0]['alias'], $alias) != 0) {
-      $nid = str_replace('node/', '', $context['source']);
-      _version_redirect_create_new_alias($nid, $entries[0]['alias'], $alias);
-    }
+      if (strcmp($entries[0]['alias'], $alias) != 0) {
+        $nid = str_replace('node/', '', $context['source']);
+        _version_redirect_create_new_alias($nid, $entries[0]['alias'], $alias);
+      }
+    }    
   }
 
 }
